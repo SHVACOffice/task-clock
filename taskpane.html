@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Task Clock</title>
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  <style>
+    :root { --ink:#1f1f1f; --muted:#5f5f5f; --line:#e1e1e1; --accent:#5b3fd4; --accent-ink:#ffffff; --ok:#0f7b3f; --warn:#a4262c; --bg:#ffffff; --panel:#f6f5fb; }
+    @media (prefers-color-scheme: dark) {
+      :root { --ink:#f0f0f0; --muted:#b5b5b5; --line:#3a3a3a; --accent:#8f7cf0; --accent-ink:#141414; --ok:#5fd18f; --warn:#ff8a8f; --bg:#1f1f1f; --panel:#2a2833; }
+    }
+    * { box-sizing: border-box; }
+    body { margin:0; padding:16px; font: 14px/1.45 -apple-system, "Segoe UI", system-ui, sans-serif; color:var(--ink); background:var(--bg); }
+    h1 { font-size:13px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin:0 0 12px; font-weight:600; }
+    .task { font-size:16px; font-weight:600; margin:0 0 4px; word-break:break-word; }
+    .sub { color:var(--muted); margin:0 0 16px; font-size:13px; }
+    .card { background:var(--panel); border-radius:8px; padding:12px; margin:0 0 16px; }
+    .status { font-size:15px; margin:0 0 4px; }
+    .status.on { color:var(--ok); font-weight:600; }
+    .elapsed { font-size:28px; font-weight:600; font-variant-numeric:tabular-nums; margin:4px 0 0; }
+    button { width:100%; padding:12px; border:0; border-radius:6px; font-size:15px; font-weight:600; cursor:pointer; margin:0 0 8px; background:var(--accent); color:var(--accent-ink); }
+    button.secondary { background:transparent; color:var(--accent); border:1px solid var(--accent); }
+    button:disabled { opacity:.5; cursor:default; }
+    .note { font-size:13px; color:var(--muted); margin:8px 0 0; }
+    .msg { font-size:13px; margin:8px 0 0; }
+    .msg.err { color:var(--warn); }
+    a { color:var(--accent); }
+  </style>
+</head>
+<body>
+  <h1>Task Clock</h1>
+  <p class="task" id="taskTitle">Loading…</p>
+  <p class="sub" id="taskSub"></p>
+  <div class="card" id="statusCard" hidden>
+    <p class="status" id="statusText"></p>
+    <p class="elapsed" id="elapsed" hidden></p>
+  </div>
+  <div id="actions"></div>
+  <p class="msg" id="msg"></p>
+  <p class="note">Clocking out opens a filled-in calendar entry for the time you worked. Click <strong>Save</strong> on it to keep it.</p>
+  <script src="taskpane.js"></script>
+</body>
+</html>
