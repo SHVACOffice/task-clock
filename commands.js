@@ -69,22 +69,69 @@
     });
   }
 
+  function sameTask(c, t) {
+    if (c.taskId || t.taskId) return c.taskId === t.taskId;
+    return c.title === t.title;
+  }
+
+  // Ends the running clock c at `now`; returns { start, end, mins, opened, error }.
+  function endSession(c, now) {
+    var rs = Office.context.roamingSettings;
+    var start = new Date(c.start);
+    var end = now;
+    if (end - start < 60000) end = new Date(start.getTime() + 60000);
+    var mins = Math.max(1, Math.round((end - start) / 60000));
+    rs.set(KEY_LAST, { title: c.title, taskId: c.taskId, link: c.link, start: start.toISOString(), end: end.toISOString() });
+    rs.remove(KEY_CLOCK);
+    var lines = [
+      "Time worked on Planner task: " + c.title,
+      fmtTime(start) + " – " + fmtTime(end) + " (" + mins + " min)"
+    ];
+    if (c.link) lines.push("Open the task in Planner: " + c.link);
+    if (c.taskId) lines.push("TimeLog:" + c.taskId);
+    var res = { start: start, end: end, mins: mins, opened: true, error: "" };
+    try {
+      Office.context.mailbox.displayNewAppointmentForm({
+        requiredAttendees: [],
+        optionalAttendees: [],
+        start: start,
+        end: end,
+        location: "",
+        resources: [],
+        subject: "Worked: " + c.title,
+        body: lines.join("\n")
+      });
+    } catch (e) {
+      res.opened = false;
+      res.error = e.message;
+    }
+    return res;
+  }
+
+  function span(r) {
+    return fmtTime(r.start) + "–" + fmtTime(r.end) + " (" + r.mins + " min)";
+  }
+
   function clockIn(event) {
     var rs = Office.context.roamingSettings;
     var finish = function () { event.completed(); };
-    var c = rs.get(KEY_CLOCK);
-    if (c) {
-      notify("Already clocked in to “" + short(c.title, 60) + "” since " + fmtTime(new Date(c.start)) + ". Clock out first.", finish);
-      return;
-    }
     readItem(function (subject, html) {
       var p = parseBody(html);
-      var title = cleanTitle(subject);
-      var start = new Date();
-      rs.set(KEY_CLOCK, { title: title, taskId: p.taskId, link: p.link, start: start.toISOString() });
+      var t = { title: cleanTitle(subject), taskId: p.taskId, link: p.link };
+      var c = rs.get(KEY_CLOCK);
+      if (c && sameTask(c, t)) {
+        notify("Already clocked in to this task since " + fmtTime(new Date(c.start)) + ".", finish);
+        return;
+      }
+      var now = new Date();
+      var prev = c ? endSession(c, now) : null;
+      rs.set(KEY_CLOCK, { title: t.title, taskId: t.taskId, link: t.link, start: now.toISOString() });
       save(function (ok, err) {
         if (!ok) return notify("Couldn't clock in: " + (err || "save failed"), finish);
-        notify("Clocked in at " + fmtTime(start) + ": " + short(title, 90), finish);
+        if (!prev) return notify("Clocked in at " + fmtTime(now) + ": " + short(t.title, 90), finish);
+        notify("Switched tasks. " + short(c.title, 40) + ": " + span(prev) +
+          (prev.opened ? " — save the entry that opened." : " (entry didn't open).") +
+          " Now on: " + short(t.title, 40), finish);
       });
     });
   }
@@ -97,35 +144,10 @@
       notify("You're not clocked in.", finish);
       return;
     }
-    var start = new Date(c.start);
-    var end = new Date();
-    if (end - start < 60000) end = new Date(start.getTime() + 60000);
-    var mins = Math.max(1, Math.round((end - start) / 60000));
-    var session = { title: c.title, taskId: c.taskId, link: c.link, start: start.toISOString(), end: end.toISOString() };
-    rs.set(KEY_LAST, session);
-    rs.remove(KEY_CLOCK);
+    var r = endSession(c, new Date());
     save(function () {
-      var lines = [
-        "Time worked on Planner task: " + c.title,
-        fmtTime(start) + " – " + fmtTime(end) + " (" + mins + " min)"
-      ];
-      if (c.link) lines.push("Open the task in Planner: " + c.link);
-      if (c.taskId) lines.push("TimeLog:" + c.taskId);
-      try {
-        Office.context.mailbox.displayNewAppointmentForm({
-          requiredAttendees: [],
-          optionalAttendees: [],
-          start: start,
-          end: end,
-          location: "",
-          resources: [],
-          subject: "Worked: " + c.title,
-          body: lines.join("\n")
-        });
-      } catch (e) {
-        return notify("Clocked out " + fmtTime(start) + "–" + fmtTime(end) + " (" + mins + " min), but the entry didn't open: " + e.message, finish);
-      }
-      notify("Clocked out: " + fmtTime(start) + "–" + fmtTime(end) + " (" + mins + " min). Click Save on the entry that opened.", finish);
+      if (!r.opened) return notify("Clocked out " + span(r) + ", but the entry didn't open: " + r.error, finish);
+      notify("Clocked out: " + span(r) + ". Click Save on the entry that opened.", finish);
     });
   }
 
