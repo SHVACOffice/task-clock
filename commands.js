@@ -34,15 +34,16 @@
 
   function parseBody(html) {
     var out = { taskId: "", link: "" };
-    var m = /PlannerTask:([A-Za-z0-9_-]{28})/.exec(html || "");
+    var m = /(?:PlannerTask|TimeLog):([A-Za-z0-9_-]{28})/.exec(html || "");
     if (m) out.taskId = m[1];
-    var l = /href=["'](https:\/\/planner\.cloud\.microsoft[^"']+)["']/i.exec(html || "");
+    var l = /href=["'](https:\/\/planner\.cloud\.microsoft[^"']+)["']/i.exec(html || "") ||
+            /(https:\/\/planner\.cloud\.microsoft[^\s"'<]+)/i.exec(html || "");
     if (l) out.link = decodeEntities(l[1]);
     return out;
   }
 
   function cleanTitle(subject) {
-    return (subject || "").replace(/^\s*Fire:\s*/i, "").trim() || "(untitled event)";
+    return (subject || "").replace(/^\s*(Fire|Worked):\s*/i, "").trim() || "(untitled event)";
   }
 
   function readItem(cb) {
