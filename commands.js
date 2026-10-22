@@ -70,6 +70,7 @@
   }
 
   function sameTask(c, t) {
+    if (c.fire || t.fire) return !!c.fire && !!t.fire;
     if (c.taskId || t.taskId) return c.taskId === t.taskId;
     return c.title === t.title;
   }
@@ -83,7 +84,11 @@
     var mins = Math.max(1, Math.round((end - start) / 60000));
     rs.set(KEY_LAST, { title: c.title, taskId: c.taskId, link: c.link, start: start.toISOString(), end: end.toISOString() });
     rs.remove(KEY_CLOCK);
-    var lines = [
+    var lines = c.fire ? [
+      "Fire clocked with Task Clock. Type what the fire was after “Fire:” in the title, then Save.",
+      fmtTime(start) + " – " + fmtTime(end) + " (" + mins + " min)",
+      "If it turns into a multi-day task, add “cont.” to the end of the Planner task's title so it isn't logged twice."
+    ] : [
       "Time worked on Planner task: " + c.title,
       fmtTime(start) + " – " + fmtTime(end) + " (" + mins + " min)"
     ];
@@ -98,7 +103,7 @@
         end: end,
         location: "",
         resources: [],
-        subject: "Worked: " + c.title,
+        subject: c.fire ? "Fire: " : "Worked: " + c.title,
         body: lines.join("\n")
       });
     } catch (e) {
@@ -112,28 +117,37 @@
     return fmtTime(r.start) + "–" + fmtTime(r.end) + " (" + r.mins + " min)";
   }
 
-  function clockIn(event) {
+  function startClock(t, finish) {
     var rs = Office.context.roamingSettings;
+    var c = rs.get(KEY_CLOCK);
+    if (c && sameTask(c, t)) {
+      notify((t.fire ? "Already clocked in to a fire since " : "Already clocked in to this task since ") + fmtTime(new Date(c.start)) + ".", finish);
+      return;
+    }
+    var now = new Date();
+    var prev = c ? endSession(c, now) : null;
+    rs.set(KEY_CLOCK, { title: t.title, taskId: t.taskId, link: t.link, fire: !!t.fire, start: now.toISOString() });
+    save(function (ok, err) {
+      if (!ok) return notify("Couldn't clock in: " + (err || "save failed"), finish);
+      var label = t.fire ? "a fire" : short(t.title, 40);
+      if (!prev) return notify("Clocked in at " + fmtTime(now) + " to " + (t.fire ? "a fire" : short(t.title, 90)) + ".", finish);
+      notify("Switched. " + short(c.fire ? "Fire" : c.title, 40) + ": " + span(prev) +
+        (prev.opened ? ". Save the entry that opened." : " (entry didn't open).") +
+        " Now on " + label + ".", finish);
+    });
+  }
+
+  function clockIn(event) {
     var finish = function () { event.completed(); };
     readItem(function (subject, html) {
       var p = parseBody(html);
-      var t = { title: cleanTitle(subject), taskId: p.taskId, link: p.link };
-      var c = rs.get(KEY_CLOCK);
-      if (c && sameTask(c, t)) {
-        notify("Already clocked in to this task since " + fmtTime(new Date(c.start)) + ".", finish);
-        return;
-      }
-      var now = new Date();
-      var prev = c ? endSession(c, now) : null;
-      rs.set(KEY_CLOCK, { title: t.title, taskId: t.taskId, link: t.link, start: now.toISOString() });
-      save(function (ok, err) {
-        if (!ok) return notify("Couldn't clock in: " + (err || "save failed"), finish);
-        if (!prev) return notify("Clocked in at " + fmtTime(now) + ": " + short(t.title, 90), finish);
-        notify("Switched tasks. " + short(c.title, 40) + ": " + span(prev) +
-          (prev.opened ? " — save the entry that opened." : " (entry didn't open).") +
-          " Now on: " + short(t.title, 40), finish);
-      });
+      startClock({ title: cleanTitle(subject), taskId: p.taskId, link: p.link, fire: false }, finish);
     });
+  }
+
+  function clockInFire(event) {
+    var finish = function () { event.completed(); };
+    startClock({ title: "Fire", taskId: "", link: "", fire: true }, finish);
   }
 
   function clockOut(event) {
@@ -152,11 +166,13 @@
   }
 
   window.clockIn = clockIn;
+  window.clockInFire = clockInFire;
   window.clockOut = clockOut;
 
   Office.onReady(function () {
     if (Office.actions && Office.actions.associate) {
       Office.actions.associate("clockIn", clockIn);
+      Office.actions.associate("clockInFire", clockInFire);
       Office.actions.associate("clockOut", clockOut);
     }
   });
