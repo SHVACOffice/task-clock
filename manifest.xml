@@ -5,7 +5,7 @@
            xmlns:mailappor="http://schemas.microsoft.com/office/mailappversionoverrides/1.0"
            xsi:type="MailApp">
   <Id>3f6c2a9e-8d41-4b7a-9c1e-5a2f7d0b6e13</Id>
-  <Version>1.0.3.0</Version>
+  <Version>1.1.0.0</Version>
   <ProviderName>Sorensen HVAC</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="Task Clock"/>
@@ -98,8 +98,8 @@
                     <bt:Image size="32" resid="out32"/>
                     <bt:Image size="80" resid="out80"/>
                   </Icon>
-                  <Action xsi:type="ExecuteFunction">
-                    <FunctionName>clockOut</FunctionName>
+                  <Action xsi:type="ShowTaskpane">
+                    <SourceLocation resid="clockoutPane"/>
                   </Action>
                 </Control>
                 <Control xsi:type="Button" id="finishButtonOrganizer">
@@ -165,8 +165,8 @@
                     <bt:Image size="32" resid="out32"/>
                     <bt:Image size="80" resid="out80"/>
                   </Icon>
-                  <Action xsi:type="ExecuteFunction">
-                    <FunctionName>clockOut</FunctionName>
+                  <Action xsi:type="ShowTaskpane">
+                    <SourceLocation resid="clockoutPane"/>
                   </Action>
                 </Control>
                 <Control xsi:type="Button" id="finishButtonAttendee">
@@ -211,6 +211,7 @@
       <bt:Urls>
         <bt:Url id="functionFile" DefaultValue="https://shvacoffice.github.io/task-clock/commands.html"/>
         <bt:Url id="finishPane" DefaultValue="https://shvacoffice.github.io/task-clock/finish.html"/>
+        <bt:Url id="clockoutPane" DefaultValue="https://shvacoffice.github.io/task-clock/clockout.html"/>
       </bt:Urls>
       <bt:ShortStrings>
         <bt:String id="groupLabel" DefaultValue="Task Clock"/>
@@ -221,9 +222,9 @@
       </bt:ShortStrings>
       <bt:LongStrings>
         <bt:String id="inTip" DefaultValue="Start the clock on the Planner task for this calendar event."/>
-        <bt:String id="outTip" DefaultValue="Stop the clock and open a filled-in calendar entry for the time worked."/>
+        <bt:String id="outTip" DefaultValue="Stop the clock, add an optional note to the task chat, and open a filled-in calendar entry for the time worked."/>
         <bt:String id="fireTip" DefaultValue="Start the clock on a fire right away. When you clock out, type what the fire was in the title before saving."/>
-        <bt:String id="doneTip" DefaultValue="Mark this Planner task complete, with an optional note. Clocks you out if you are clocked in to it."/>
+        <bt:String id="doneTip" DefaultValue="Mark this Planner task complete and post an optional note to its chat. Clocks you out if you are clocked in to it."/>
       </bt:LongStrings>
     </Resources>
   </VersionOverrides>

@@ -1,11 +1,10 @@
 /* Task Clock — Finish panel.
-   Marks a Planner task as finished from its calendar event. The add-in cannot write to Planner,
-   so it opens a pre-filled calendar entry carrying "TaskDone:<taskId>" (and an optional
-   "Planner note:" line). The scheduler flow reads that entry at its next run, marks the task
-   complete in Planner, adds the note to the task, and removes the task's planned spots.
-   - Clocked in to this task: the clock stops and the entry is the "Worked:" record of the time.
-   - Not clocked in to this task: the entry is a 1-minute "Done:" marker that the flow deletes
-     after it has finished the task. */
+   Signs in as the person using Outlook, posts the optional note to the Planner task's chat under
+   their name, and marks the task complete in Planner right away.
+   - Clocked in to this task: the clock stops and a "Worked:" entry opens to record the time.
+     It carries "TaskDone:<id>" so the scheduler clears the task's remaining planned spots.
+   - If sign-in or Planner isn't reachable, it falls back to the older route: a calendar entry with
+     "TaskDone:<id>" (and a "Planner note:" line) that the scheduler acts on at its next run. */
 (function () {
   "use strict";
 
@@ -15,10 +14,10 @@
 
   function $(id) { return document.getElementById(id); }
 
-  function setMsg(text, isErr) {
+  function setMsg(text, kind) {
     var m = $("msg");
     m.textContent = text || "";
-    m.className = "msg" + (isErr ? " err" : "");
+    m.className = "msg" + (kind ? " " + kind : "");
   }
 
   function fmtTime(d) {
@@ -63,82 +62,99 @@
   function settings() { return Office.context.roamingSettings; }
 
   function cleanNote(s) {
-    // One line, no characters the flow uses to find the end of the note.
-    return (s || "").replace(/[\r\n]+/g, " ").replace(/[<>]/g, "").replace(/\s+/g, " ").trim().slice(0, 900);
+    return (s || "").replace(/\s+/g, " ").trim().slice(0, 2000);
+  }
+
+  // For the fallback "Planner note:" line, which the flow reads up to the next "<".
+  function flowNote(s) {
+    return s.replace(/[<>]/g, "").slice(0, 900);
   }
 
   function openEntry(opts) {
     Office.context.mailbox.displayNewAppointmentForm({
-      requiredAttendees: [],
-      optionalAttendees: [],
-      start: opts.start,
-      end: opts.end,
-      location: "",
-      resources: [],
-      subject: opts.subject,
-      body: opts.lines.join("\n")
+      requiredAttendees: [], optionalAttendees: [], location: "", resources: [],
+      start: opts.start, end: opts.end, subject: opts.subject, body: opts.lines.join("\n")
+    });
+  }
+
+  function saveSettings() {
+    return new Promise(function (resolve, reject) {
+      settings().saveAsync(function (r) {
+        if (r.status === Office.AsyncResultStatus.Succeeded) resolve();
+        else reject(new Error(r.error && r.error.message));
+      });
     });
   }
 
   function finish() {
     var btn = $("finishBtn");
     btn.disabled = true;
+    setMsg("Finishing…");
     var note = cleanNote($("note").value);
     var c = settings().get(KEY_CLOCK) || null;
     var clockedHere = !!(c && !c.fire && c.taskId && c.taskId === current.taskId);
     var now = new Date();
-    var lines, subject, start, end;
+    var start, end, mins = 0;
 
     if (clockedHere) {
       start = new Date(c.start);
       end = now;
       if (end - start < 60000) end = new Date(start.getTime() + 60000);
-      var mins = Math.max(1, Math.round((end - start) / 60000));
-      subject = "Worked: " + current.title;
-      lines = [
-        "Time worked on Planner task: " + current.title,
-        fmtTime(start) + " – " + fmtTime(end) + " (" + mins + " min)",
-        "Finished with Task Clock."
-      ];
+      mins = Math.max(1, Math.round((end - start) / 60000));
       settings().set(KEY_LAST, { title: c.title, taskId: c.taskId, link: c.link, start: start.toISOString(), end: end.toISOString() });
       settings().remove(KEY_CLOCK);
-    } else {
-      start = now;
-      end = new Date(now.getTime() + 60000);
-      subject = "Done: " + current.title;
-      lines = [
-        "Finished with Task Clock (no time clocked).",
-        "This entry is removed automatically once the task is marked complete in Planner."
-      ];
     }
-    if (note) lines.push("Planner note: " + note);
-    if (current.link) lines.push("Open the task in Planner: " + current.link);
-    if (clockedHere) lines.push("TimeLog:" + current.taskId);
-    lines.push("TaskDone:" + current.taskId);
-    if (!clockedHere) lines.push("DoneMarker");
 
-    var proceed = function () {
-      try {
-        openEntry({ start: start, end: end, subject: subject, lines: lines });
-        setMsg("Click Save on the entry that opened. Planner will show the task complete within about 30 minutes." +
-          (c && !clockedHere ? " You're still clocked in to “" + (c.fire ? "a fire" : c.title) + "”." : ""));
-      } catch (e) {
-        setMsg("Couldn't open the calendar entry: " + e.message, true);
-        btn.disabled = false;
-      }
-    };
-    if (clockedHere) {
-      settings().saveAsync(function (r) {
-        if (r.status !== Office.AsyncResultStatus.Succeeded) {
-          setMsg("Couldn't save the clock state: " + (r.error && r.error.message), true);
-          btn.disabled = false;
-          return;
-        }
-        proceed();
+    var result = { chat: !note, chatErr: "", done: false, doneErr: "" };
+    var chatText = "Finished" + (clockedHere ? " (" + mins + " min)" : "") + ": " + note;
+
+    (clockedHere ? saveSettings() : Promise.resolve()).then(function () {
+      var chatP = note ? TaskClockAuth.postChat(current.taskId, chatText).then(
+        function () { result.chat = true; }, function (e) { result.chatErr = e.message; }) : Promise.resolve();
+      return chatP.then(function () {
+        return TaskClockAuth.completeTask(current.taskId).then(
+          function () { result.done = true; }, function (e) { result.doneErr = e.message; });
       });
-    } else {
-      proceed();
-    }
+    }).then(function () {
+      var needEntry = clockedHere || !result.done || (note && !result.chat);
+      if (needEntry) {
+        var lines, subject, s, e;
+        if (clockedHere) {
+          s = start; e = end;
+          subject = "Worked: " + current.title;
+          lines = [
+            "Time worked on Planner task: " + current.title,
+            fmtTime(start) + " – " + fmtTime(end) + " (" + mins + " min)",
+            "Finished with Task Clock."
+          ];
+        } else {
+          s = now; e = new Date(now.getTime() + 60000);
+          subject = "Done: " + current.title;
+          lines = [
+            "Finished with Task Clock (no time clocked).",
+            "This entry is removed automatically once the task is marked complete in Planner."
+          ];
+        }
+        if (note && !result.chat) lines.push("Planner note: " + flowNote(note));
+        if (current.link) lines.push("Open the task in Planner: " + current.link);
+        if (clockedHere) lines.push("TimeLog:" + current.taskId);
+        lines.push("TaskDone:" + current.taskId);
+        if (!clockedHere) lines.push("DoneMarker");
+        openEntry({ start: s, end: e, subject: subject, lines: lines });
+      }
+
+      var parts = [];
+      parts.push(result.done ? "Marked complete in Planner." :
+        "Couldn't mark it complete directly (" + result.doneErr + "). Save the entry that opened and Planner updates within about 30 minutes.");
+      if (note) parts.push(result.chat ? "Your note is in the task chat." :
+        "The note couldn't go to the task chat (" + result.chatErr + "), so it will be added to the task's Notes instead.");
+      if (clockedHere) parts.push("Clocked out. Click Save on the time entry that opened.");
+      else if (c) parts.push("You're still clocked in to “" + (c.fire ? "a fire" : c.title) + "”.");
+      setMsg(parts.join(" "), result.done && result.chat ? "ok" : "err");
+    }).catch(function (e) {
+      setMsg("Couldn't finish: " + e.message, "err");
+      btn.disabled = false;
+    });
   }
 
   Office.onReady(function () {
