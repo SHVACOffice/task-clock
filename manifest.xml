@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
+           xmlns:mailappor="http://schemas.microsoft.com/office/mailappversionoverrides/1.0"
+           xsi:type="MailApp">
+  <Id>3f6c2a9e-8d41-4b7a-9c1e-5a2f7d0b6e13</Id>
+  <Version>1.0.3.0</Version>
+  <ProviderName>Sorensen HVAC</ProviderName>
+  <DefaultLocale>en-US</DefaultLocale>
+  <DisplayName DefaultValue="Task Clock"/>
+  <Description DefaultValue="Clock in and out of Planner tasks from their calendar events."/>
+  <IconUrl DefaultValue="https://shvacoffice.github.io/task-clock/assets/icon-64.png"/>
+  <HighResolutionIconUrl DefaultValue="https://shvacoffice.github.io/task-clock/assets/icon-128.png"/>
+  <SupportUrl DefaultValue="https://shvacoffice.github.io/task-clock/"/>
+  <AppDomains>
+    <AppDomain>https://shvacoffice.github.io</AppDomain>
+  </AppDomains>
+  <Hosts>
+    <Host Name="Mailbox"/>
+  </Hosts>
+  <Requirements>
+    <Sets>
+      <Set Name="Mailbox" MinVersion="1.5"/>
+    </Sets>
+  </Requirements>
+  <FormSettings>
+    <Form xsi:type="ItemRead">
+      <DesktopSettings>
+        <SourceLocation DefaultValue="https://shvacoffice.github.io/task-clock/taskpane.html"/>
+        <RequestedHeight>250</RequestedHeight>
+      </DesktopSettings>
+    </Form>
+    <Form xsi:type="ItemEdit">
+      <DesktopSettings>
+        <SourceLocation DefaultValue="https://shvacoffice.github.io/task-clock/taskpane.html"/>
+      </DesktopSettings>
+    </Form>
+  </FormSettings>
+  <Permissions>ReadWriteItem</Permissions>
+  <Rule xsi:type="RuleCollection" Mode="Or">
+    <Rule xsi:type="ItemIs" ItemType="Appointment" FormType="Read"/>
+    <Rule xsi:type="ItemIs" ItemType="Appointment" FormType="Edit"/>
+  </Rule>
+  <DisableEntityHighlighting>false</DisableEntityHighlighting>
+  <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides" xsi:type="VersionOverridesV1_0">
+    <Requirements>
+      <bt:Sets DefaultMinVersion="1.5">
+        <bt:Set Name="Mailbox"/>
+      </bt:Sets>
+    </Requirements>
+    <Hosts>
+      <Host xsi:type="MailHost">
+        <DesktopFormFactor>
+          <FunctionFile resid="functionFile"/>
+          <ExtensionPoint xsi:type="AppointmentOrganizerCommandSurface">
+            <OfficeTab id="TabDefault">
+              <Group id="taskClockGroupOrganizer">
+                <Label resid="groupLabel"/>
+                <Control xsi:type="Button" id="clockInButtonOrganizer">
+                  <Label resid="inLabel"/>
+                  <Supertip>
+                    <Title resid="inLabel"/>
+                    <Description resid="inTip"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="in16"/>
+                    <bt:Image size="32" resid="in32"/>
+                    <bt:Image size="80" resid="in80"/>
+                  </Icon>
+                  <Action xsi:type="ExecuteFunction">
+                    <FunctionName>clockIn</FunctionName>
+                  </Action>
+                </Control>
+                <Control xsi:type="Button" id="clockInFireButtonOrganizer">
+                  <Label resid="fireLabel"/>
+                  <Supertip>
+                    <Title resid="fireLabel"/>
+                    <Description resid="fireTip"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="fire16"/>
+                    <bt:Image size="32" resid="fire32"/>
+                    <bt:Image size="80" resid="fire80"/>
+                  </Icon>
+                  <Action xsi:type="ExecuteFunction">
+                    <FunctionName>clockInFire</FunctionName>
+                  </Action>
+                </Control>
+                <Control xsi:type="Button" id="clockOutButtonOrganizer">
+                  <Label resid="outLabel"/>
+                  <Supertip>
+                    <Title resid="outLabel"/>
+                    <Description resid="outTip"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="out16"/>
+                    <bt:Image size="32" resid="out32"/>
+                    <bt:Image size="80" resid="out80"/>
+                  </Icon>
+                  <Action xsi:type="ExecuteFunction">
+                    <FunctionName>clockOut</FunctionName>
+                  </Action>
+                </Control>
+                <Control xsi:type="Button" id="finishButtonOrganizer">
+                  <Label resid="doneLabel"/>
+                  <Supertip>
+                    <Title resid="doneLabel"/>
+                    <Description resid="doneTip"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="done16"/>
+                    <bt:Image size="32" resid="done32"/>
+                    <bt:Image size="80" resid="done80"/>
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <SourceLocation resid="finishPane"/>
+                  </Action>
+                </Control>
+              </Group>
+            </OfficeTab>
+          </ExtensionPoint>
+          <ExtensionPoint xsi:type="AppointmentAttendeeCommandSurface">
+            <OfficeTab id="TabDefault">
+              <Group id="taskClockGroupAttendee">
+                <Label resid="groupLabel"/>
+                <Control xsi:type="Button" id="clockInButtonAttendee">
+                  <Label resid="inLabel"/>
+                  <Supertip>
+                    <Title resid="inLabel"/>
+                    <Description resid="inTip"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="in16"/>
+                    <bt:Image size="32" resid="in32"/>
+                    <bt:Image size="80" resid="in80"/>
+                  </Icon>
+                  <Action xsi:type="ExecuteFunction">
+                    <FunctionName>clockIn</FunctionName>
+                  </Action>
+                </Control>
+                <Control xsi:type="Button" id="clockInFireButtonAttendee">
+                  <Label resid="fireLabel"/>
+                  <Supertip>
+                    <Title resid="fireLabel"/>
+                    <Description resid="fireTip"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="fire16"/>
+                    <bt:Image size="32" resid="fire32"/>
+                    <bt:Image size="80" resid="fire80"/>
+                  </Icon>
+                  <Action xsi:type="ExecuteFunction">
+                    <FunctionName>clockInFire</FunctionName>
+                  </Action>
+                </Control>
+                <Control xsi:type="Button" id="clockOutButtonAttendee">
+                  <Label resid="outLabel"/>
+                  <Supertip>
+                    <Title resid="outLabel"/>
+                    <Description resid="outTip"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="out16"/>
+                    <bt:Image size="32" resid="out32"/>
+                    <bt:Image size="80" resid="out80"/>
+                  </Icon>
+                  <Action xsi:type="ExecuteFunction">
+                    <FunctionName>clockOut</FunctionName>
+                  </Action>
+                </Control>
+                <Control xsi:type="Button" id="finishButtonAttendee">
+                  <Label resid="doneLabel"/>
+                  <Supertip>
+                    <Title resid="doneLabel"/>
+                    <Description resid="doneTip"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="done16"/>
+                    <bt:Image size="32" resid="done32"/>
+                    <bt:Image size="80" resid="done80"/>
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <SourceLocation resid="finishPane"/>
+                  </Action>
+                </Control>
+              </Group>
+            </OfficeTab>
+          </ExtensionPoint>
+        </DesktopFormFactor>
+      </Host>
+    </Hosts>
+    <Resources>
+      <bt:Images>
+        <bt:Image id="icon16" DefaultValue="https://shvacoffice.github.io/task-clock/assets/icon-16.png"/>
+        <bt:Image id="icon32" DefaultValue="https://shvacoffice.github.io/task-clock/assets/icon-32.png"/>
+        <bt:Image id="icon80" DefaultValue="https://shvacoffice.github.io/task-clock/assets/icon-80.png"/>
+        <bt:Image id="in16" DefaultValue="https://shvacoffice.github.io/task-clock/assets/in-16.png"/>
+        <bt:Image id="in32" DefaultValue="https://shvacoffice.github.io/task-clock/assets/in-32.png"/>
+        <bt:Image id="in80" DefaultValue="https://shvacoffice.github.io/task-clock/assets/in-80.png"/>
+        <bt:Image id="out16" DefaultValue="https://shvacoffice.github.io/task-clock/assets/out-16.png"/>
+        <bt:Image id="out32" DefaultValue="https://shvacoffice.github.io/task-clock/assets/out-32.png"/>
+        <bt:Image id="out80" DefaultValue="https://shvacoffice.github.io/task-clock/assets/out-80.png"/>
+        <bt:Image id="fire16" DefaultValue="https://shvacoffice.github.io/task-clock/assets/fire-16.png"/>
+        <bt:Image id="fire32" DefaultValue="https://shvacoffice.github.io/task-clock/assets/fire-32.png"/>
+        <bt:Image id="fire80" DefaultValue="https://shvacoffice.github.io/task-clock/assets/fire-80.png"/>
+        <bt:Image id="done16" DefaultValue="https://shvacoffice.github.io/task-clock/assets/done-16.png"/>
+        <bt:Image id="done32" DefaultValue="https://shvacoffice.github.io/task-clock/assets/done-32.png"/>
+        <bt:Image id="done80" DefaultValue="https://shvacoffice.github.io/task-clock/assets/done-80.png"/>
+      </bt:Images>
+      <bt:Urls>
+        <bt:Url id="functionFile" DefaultValue="https://shvacoffice.github.io/task-clock/commands.html"/>
+        <bt:Url id="finishPane" DefaultValue="https://shvacoffice.github.io/task-clock/finish.html"/>
+      </bt:Urls>
+      <bt:ShortStrings>
+        <bt:String id="groupLabel" DefaultValue="Task Clock"/>
+        <bt:String id="inLabel" DefaultValue="Clock In"/>
+        <bt:String id="outLabel" DefaultValue="Clock Out"/>
+        <bt:String id="fireLabel" DefaultValue="Clock In: Fire"/>
+        <bt:String id="doneLabel" DefaultValue="Finish"/>
+      </bt:ShortStrings>
+      <bt:LongStrings>
+        <bt:String id="inTip" DefaultValue="Start the clock on the Planner task for this calendar event."/>
+        <bt:String id="outTip" DefaultValue="Stop the clock and open a filled-in calendar entry for the time worked."/>
+        <bt:String id="fireTip" DefaultValue="Start the clock on a fire right away. When you clock out, type what the fire was in the title before saving."/>
+        <bt:String id="doneTip" DefaultValue="Mark this Planner task complete, with an optional note. Clocks you out if you are clocked in to it."/>
+      </bt:LongStrings>
+    </Resources>
+  </VersionOverrides>
+</OfficeApp>
