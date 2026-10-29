@@ -75,7 +75,7 @@
     return c.title === t.title;
   }
 
-  // Ends the running clock c at `now`; returns { start, end, mins, opened, error }.
+  // Ends the running clock c at `now`; returns { start, end, mins, entry } (entry not yet written).
   function endSession(c, now) {
     var rs = Office.context.roamingSettings;
     var start = new Date(c.start);
@@ -94,23 +94,37 @@
     ];
     if (c.link) lines.push("Open the task in Planner: " + c.link);
     if (c.taskId) lines.push("TimeLog:" + c.taskId);
-    var res = { start: start, end: end, mins: mins, opened: true, error: "" };
-    try {
-      Office.context.mailbox.displayNewAppointmentForm({
-        requiredAttendees: [],
-        optionalAttendees: [],
-        start: start,
-        end: end,
-        location: "",
-        resources: [],
-        subject: c.fire ? "Fire: " : "Worked: " + c.title,
-        body: lines.join("\n")
-      });
-    } catch (e) {
-      res.opened = false;
-      res.error = e.message;
+    return { start: start, end: end, mins: mins,
+      entry: { start: start, end: end, subject: c.fire ? "Fire: " : "Worked: " + c.title, lines: lines, formOnly: !!c.fire } };
+  }
+
+  // Saves the ended session's entry straight to the calendar when possible, otherwise opens the form.
+  // Resolves "saved", "form" or "failed".
+  function writeEntry(r, c) {
+    if (window.TaskClockAuth) {
+      return TaskClockAuth.saveEntry(r.entry).then(function (how) { return how; }, function () { return "failed"; })
+        .then(function (how) {
+          if (!c || !c.taskId) return how;
+          // Clear this task's planned spots from the day before the work through today.
+          var from = new Date(r.start); from.setHours(0, 0, 0, 0); from.setDate(from.getDate() - 1);
+          var to = new Date(r.end); to.setHours(23, 59, 59, 0);
+          return TaskClockAuth.removeSpots(c.taskId, from, to).then(function () { return how; }, function () { return how; });
+        });
     }
-    return res;
+    return new Promise(function (resolve) {
+      try {
+        Office.context.mailbox.displayNewAppointmentForm({
+          requiredAttendees: [], optionalAttendees: [], location: "", resources: [],
+          start: r.entry.start, end: r.entry.end, subject: r.entry.subject, body: r.entry.lines.join("\n")
+        });
+        resolve("form");
+      } catch (e) { resolve("failed"); }
+    });
+  }
+
+  function entryNote(how) {
+    return how === "saved" ? "Time saved to your calendar." :
+      how === "form" ? "Save the entry that opened." : "The time entry didn't save or open.";
   }
 
   function span(r) {
@@ -131,9 +145,10 @@
       if (!ok) return notify("Couldn't clock in: " + (err || "save failed"), finish);
       var label = t.fire ? "a fire" : short(t.title, 40);
       if (!prev) return notify("Clocked in at " + fmtTime(now) + " to " + (t.fire ? "a fire" : short(t.title, 90)) + ".", finish);
-      notify("Switched. " + short(c.fire ? "Fire" : c.title, 40) + ": " + span(prev) +
-        (prev.opened ? ". Save the entry that opened." : " (entry didn't open).") +
-        " Now on " + label + ".", finish);
+      writeEntry(prev, c).then(function (how) {
+        notify("Switched. " + short(c.fire ? "Fire" : c.title, 40) + ": " + span(prev) + ". " + entryNote(how) +
+          " Now on " + label + ".", finish);
+      });
     });
   }
 
@@ -160,8 +175,9 @@
     }
     var r = endSession(c, new Date());
     save(function () {
-      if (!r.opened) return notify("Clocked out " + span(r) + ", but the entry didn't open: " + r.error, finish);
-      notify("Clocked out: " + span(r) + ". Click Save on the entry that opened.", finish);
+      writeEntry(r, c).then(function (how) {
+        notify("Clocked out: " + span(r) + ". " + entryNote(how), finish);
+      });
     });
   }
 

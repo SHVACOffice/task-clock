@@ -24,7 +24,7 @@
     return (s || "").replace(/\s+/g, " ").trim().slice(0, 2000);
   }
 
-  function openWorkedEntry(c, start, end, mins) {
+  function workedEntry(c, start, end, mins) {
     var lines = c.fire ? [
       "Fire clocked with Task Clock. Type what the fire was after “Fire:” in the title, then Save.",
       fmtTime(start) + " – " + fmtTime(end) + " (" + mins + " min)",
@@ -35,12 +35,8 @@
     ];
     if (c.link) lines.push("Open the task in Planner: " + c.link);
     if (c.taskId) lines.push("TimeLog:" + c.taskId);
-    Office.context.mailbox.displayNewAppointmentForm({
-      requiredAttendees: [], optionalAttendees: [], location: "", resources: [],
-      start: start, end: end,
-      subject: c.fire ? "Fire: " : "Worked: " + c.title,
-      body: lines.join("\n")
-    });
+    // A fire needs its title typed in, so it always opens the form.
+    return { start: start, end: end, subject: c.fire ? "Fire: " : "Worked: " + c.title, lines: lines, formOnly: !!c.fire };
   }
 
   function clockOut() {
@@ -61,11 +57,28 @@
         btn.disabled = false;
         return;
       }
-      var opened = true;
-      try { openWorkedEntry(c, start, end, mins); } catch (e) { opened = false; }
-      var base = "Clocked out: " + fmtTime(start) + "–" + fmtTime(end) + " (" + mins + " min). " +
-        (opened ? "Click Save on the entry that opened." : "The calendar entry didn't open.");
-      if (!note) { setMsg(base, opened ? "ok" : "err"); return; }
+      TaskClockAuth.saveEntry(workedEntry(c, start, end, mins)).then(function (how) {
+        return clearSpots().then(function (n) {
+          finishUp((how === "saved" ? "Your time is saved to your calendar." : "Click Save on the time entry that opened.") +
+            (n ? " Removed " + n + " planned spot" + (n === 1 ? "" : "s") + " for this task." : ""), true);
+        });
+      }, function () {
+        finishUp("The time entry couldn't be saved or opened.", false);
+      });
+    });
+
+    // Removes this task's planned spots from the day before the work through the end of today,
+    // so the task doesn't show twice. Anything left is handled by the scheduler.
+    function clearSpots() {
+      if (!c.taskId) return Promise.resolve(0);
+      var from = new Date(start); from.setHours(0, 0, 0, 0); from.setDate(from.getDate() - 1);
+      var to = new Date(end); to.setHours(23, 59, 59, 0);
+      return TaskClockAuth.removeSpots(c.taskId, from, to).catch(function () { return 0; });
+    }
+
+    function finishUp(entryMsg, ok) {
+      var base = "Clocked out: " + fmtTime(start) + "–" + fmtTime(end) + " (" + mins + " min). " + entryMsg;
+      if (!note) { setMsg(base, ok ? "ok" : "err"); return; }
       if (!c.taskId) {
         setMsg(base + " The note wasn't posted because this clock isn't tied to a Planner task.", "err");
         return;
@@ -76,7 +89,7 @@
       }, function (e) {
         setMsg(base + " The note couldn't be posted (" + e.message + "). Add it in Planner instead.", "err");
       });
-    });
+    }
   }
 
   Office.onReady(function () {

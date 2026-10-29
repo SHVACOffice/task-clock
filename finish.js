@@ -70,13 +70,6 @@
     return s.replace(/[<>]/g, "").slice(0, 900);
   }
 
-  function openEntry(opts) {
-    Office.context.mailbox.displayNewAppointmentForm({
-      requiredAttendees: [], optionalAttendees: [], location: "", resources: [],
-      start: opts.start, end: opts.end, subject: opts.subject, body: opts.lines.join("\n")
-    });
-  }
-
   function saveSettings() {
     return new Promise(function (resolve, reject) {
       settings().saveAsync(function (r) {
@@ -114,6 +107,13 @@
       return chatP.then(function () {
         return TaskClockAuth.completeTask(current.taskId).then(
           function () { result.done = true; }, function (e) { result.doneErr = e.message; });
+      }).then(function () {
+        if (!result.done) return;
+        // The task is finished, so its remaining planned spots come off the calendar now.
+        var from = new Date(); from.setHours(0, 0, 0, 0); from.setDate(from.getDate() - 1);
+        var to = new Date(); to.setDate(to.getDate() + 14);
+        return TaskClockAuth.removeSpots(current.taskId, from, to).then(
+          function (n) { result.removed = n; }, function () { result.removed = 0; });
       });
     }).then(function () {
       var needEntry = clockedHere || !result.done || (note && !result.chat);
@@ -140,17 +140,23 @@
         if (clockedHere) lines.push("TimeLog:" + current.taskId);
         lines.push("TaskDone:" + current.taskId);
         if (!clockedHere) lines.push("DoneMarker");
-        openEntry({ start: s, end: e, subject: subject, lines: lines });
+        return TaskClockAuth.saveEntry({ start: s, end: e, subject: subject, lines: lines }).then(
+          function (how) { return how; }, function () { return "failed"; });
       }
-
+      return "none";
+    }).then(function (how) {
       var parts = [];
       parts.push(result.done ? "Marked complete in Planner." :
-        "Couldn't mark it complete directly (" + result.doneErr + "). Save the entry that opened and Planner updates within about 30 minutes.");
+        "Couldn't mark it complete directly (" + result.doneErr + "). The half-hour update will finish it from the calendar entry.");
       if (note) parts.push(result.chat ? "Your note is in the task chat." :
         "The note couldn't go to the task chat (" + result.chatErr + "), so it will be added to the task's Notes instead.");
-      if (clockedHere) parts.push("Clocked out. Click Save on the time entry that opened.");
-      else if (c) parts.push("You're still clocked in to “" + (c.fire ? "a fire" : c.title) + "”.");
-      setMsg(parts.join(" "), result.done && result.chat ? "ok" : "err");
+      var entryMsg = how === "saved" ? (clockedHere ? "Clocked out; your time is saved to your calendar." : "") :
+        how === "form" ? (clockedHere ? "Clocked out. Click Save on the time entry that opened." : "Click Save on the entry that opened.") :
+        how === "failed" ? "The calendar entry couldn't be saved or opened." : "";
+      if (entryMsg) parts.push(entryMsg);
+      if (result.removed) parts.push("Removed " + result.removed + " planned spot" + (result.removed === 1 ? "" : "s") + " from your calendar.");
+      if (c && !clockedHere) parts.push("You're still clocked in to “" + (c.fire ? "a fire" : c.title) + "”.");
+      setMsg(parts.join(" "), result.done && result.chat && how !== "failed" ? "ok" : "err");
     }).catch(function (e) {
       setMsg("Couldn't finish: " + e.message, "err");
       btn.disabled = false;
