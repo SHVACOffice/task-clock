@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Finish task</title>
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  <style>
+    :root { --ink:#1f1f1f; --muted:#5f5f5f; --line:#d6d6d6; --ok:#0f7b3f; --ok-ink:#ffffff; --warn:#a4262c; --bg:#ffffff; --panel:#f3f8f5; }
+    @media (prefers-color-scheme: dark) {
+      :root { --ink:#f0f0f0; --muted:#b5b5b5; --line:#4a4a4a; --ok:#5fd18f; --ok-ink:#102418; --warn:#ff8a8f; --bg:#1f1f1f; --panel:#22302a; }
+    }
+    * { box-sizing: border-box; }
+    body { margin:0; padding:16px; font: 14px/1.45 -apple-system, "Segoe UI", system-ui, sans-serif; color:var(--ink); background:var(--bg); }
+    h1 { font-size:13px; letter-spacing:.04em; color:var(--muted); margin:0 0 12px; font-weight:600; }
+    .task { font-size:16px; font-weight:600; margin:0 0 4px; word-break:break-word; }
+    .sub { color:var(--muted); margin:0 0 14px; font-size:13px; }
+    .card { background:var(--panel); border-radius:8px; padding:10px 12px; margin:0 0 14px; font-size:13px; }
+    label { display:block; font-size:13px; font-weight:600; margin:0 0 6px; }
+    textarea { width:100%; min-height:96px; padding:8px; border:1px solid var(--line); border-radius:6px; font:inherit; color:var(--ink); background:var(--bg); resize:vertical; }
+    button { width:100%; padding:12px; border:0; border-radius:6px; font-size:15px; font-weight:600; cursor:pointer; margin:12px 0 8px; background:var(--ok); color:var(--ok-ink); }
+    button:disabled { opacity:.5; cursor:default; }
+    .msg { font-size:13px; margin:8px 0 0; }
+    .msg.err { color:var(--warn); }
+    .note { font-size:12px; color:var(--muted); margin:12px 0 0; }
+  </style>
+</head>
+<body>
+  <h1>Finish task</h1>
+  <p class="task" id="taskTitle">Loading…</p>
+  <p class="sub" id="taskSub"></p>
+  <div class="card" id="clockCard" hidden></div>
+  <div id="form" hidden>
+    <label for="note">Note to add to the Planner task (optional)</label>
+    <textarea id="note" placeholder="What was done, or anything to remember"></textarea>
+    <button id="finishBtn">Finish task</button>
+  </div>
+  <p class="msg" id="msg"></p>
+  <p class="note">A filled-in calendar entry opens. Click <strong>Save</strong> on it. The task is marked complete in Planner, with your note, at the next half-hour update.</p>
+  <script src="finish.js"></script>
+</body>
+</html>
