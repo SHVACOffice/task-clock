@@ -24,9 +24,9 @@
     return (s || "").replace(/\s+/g, " ").trim().slice(0, 2000);
   }
 
-  function workedEntry(c, start, end, mins) {
+  function workedEntry(c, start, end, mins, fireWhat) {
     var lines = c.fire ? [
-      "Fire clocked with Task Clock. Type what the fire was after “Fire:” in the title, then Save.",
+      "Fire clocked with Task Clock.",
       fmtTime(start) + " – " + fmtTime(end) + " (" + mins + " min)",
       "If it turns into a multi-day task, add “cont.” to the end of the Planner task's title so it isn't logged twice."
     ] : [
@@ -35,8 +35,14 @@
     ];
     if (c.link) lines.push("Open the task in Planner: " + c.link);
     if (c.taskId) lines.push("TimeLog:" + c.taskId);
-    // A fire needs its title typed in, so it always opens the form.
-    return { start: start, end: end, subject: c.fire ? "Fire: " : "Worked: " + c.title, lines: lines, formOnly: !!c.fire };
+    // A fire is saved straight to the calendar, titled with what the person typed in the panel.
+    // If saving fails, the filled-in form opens instead so the time isn't lost.
+    return {
+      start: start, end: end,
+      subject: c.fire ? "Fire: " + fireWhat : "Worked: " + c.title,
+      lines: lines,
+      categories: c.fire ? ["Block: Fire"] : null
+    };
   }
 
   function clockOut() {
@@ -45,6 +51,12 @@
     var c = settings().get(KEY_CLOCK);
     if (!c) { setMsg("You're not clocked in.", "err"); return; }
     var note = cleanNote($("note").value);
+    var fireWhat = "";
+    if (c.fire) {
+      fireWhat = note.slice(0, 200);
+      note = "";
+      if (!fireWhat) { setMsg("Type what the fire was first.", "err"); btn.disabled = false; return; }
+    }
     var start = new Date(c.start);
     var end = new Date();
     if (end - start < 60000) end = new Date(start.getTime() + 60000);
@@ -57,7 +69,7 @@
         btn.disabled = false;
         return;
       }
-      TaskClockAuth.saveEntry(workedEntry(c, start, end, mins)).then(function (how) {
+      TaskClockAuth.saveEntry(workedEntry(c, start, end, mins, fireWhat)).then(function (how) {
         return clearSpots().then(function (n) {
           finishUp((how === "saved" ? "Your time is saved to your calendar." : "Click Save on the time entry that opened.") +
             (n ? " Removed " + n + " planned spot" + (n === 1 ? "" : "s") + " for this task." : ""), true);
@@ -102,6 +114,9 @@
     $("taskSub").textContent = "Clocked in since " + fmtTime(new Date(c.start)) + ".";
     $("form").hidden = false;
     $("outBtn").addEventListener("click", clockOut);
-    if (c.fire) { $("note").placeholder = "Notes can't be posted for fires (no Planner task)"; $("note").disabled = true; }
+    if (c.fire) {
+      $("noteLabel").textContent = "What was the fire? (required)";
+      $("note").placeholder = "Becomes the calendar entry title: Fire: …";
+    }
   });
 })();

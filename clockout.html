@@ -31,13 +31,13 @@
   <p class="task" id="taskTitle">Loading…</p>
   <p class="sub" id="taskSub"></p>
   <div id="form" hidden>
-    <label for="note">Note for the task chat (optional)</label>
+    <label for="note" id="noteLabel">Note for the task chat (optional)</label>
     <textarea id="note" placeholder="Where you left off, or anything to remember"></textarea>
     <button id="outBtn">Clock out</button>
   </div>
   <p class="msg" id="msg"></p>
-  <p class="note">Clocking out saves the time you worked to your calendar. If it can't, a filled-in entry opens instead; click <strong>Save</strong> on it. A note, if you type one, is posted to the task's chat under your name. Fires always open the entry so you can type what the fire was.</p>
-  <script src="auth.js"></script>
-  <script src="clockout.js"></script>
+  <p class="note">Clocking out saves the time you worked to your calendar. If it can't, a filled-in entry opens instead; click <strong>Save</strong> on it. A note, if you type one, is posted to the task's chat under your name. For a fire, type what it was; the entry is saved as “Fire: …” with the Fire color.</p>
+  <script src="auth.js?v=20261106"></script>
+  <script src="clockout.js?v=20261106"></script>
 </body>
 </html>

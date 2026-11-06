@@ -95,14 +95,16 @@
 
   // Saves a calendar entry straight to the signed-in person's calendar, without opening a form.
   function createEvent(opts) {
-    return graph("POST", "/v1.0/me/events", {
+    var ev = {
       subject: opts.subject,
       body: { contentType: "HTML", content: linesToHtml(opts.lines) },
       start: graphTime(opts.start),
       end: graphTime(opts.end),
       showAs: "busy",
       isReminderOn: false
-    }, null, CAL_SCOPES, true);
+    };
+    if (opts.categories && opts.categories.length) ev.categories = opts.categories;
+    return graph("POST", "/v1.0/me/events", ev, null, CAL_SCOPES, true);
   }
 
   // Saves the entry directly; if that isn't possible, opens the filled-in form so nothing is lost.
